@@ -28,9 +28,7 @@
 * [宽客网](http://www.cnq.net)
 * [贵州IT](http://www.gzit.info)
 * [超级产品经理](https://imspm.com)
-* [蚂蚁程序猿](http://bbs.itmayiedu.com)
-* [北纬极客](https://begeek.bwae.org)
-* [架构师小秘圈](http://www.3xmq.com)
+* [许昌IT圈](http://www.xcitq.com)
 
 商业版：
 
@@ -59,7 +57,7 @@
 ## 授权
 
 * 社区版：使用 AGPLv3 开源，如果你选择使用社区版，则必须完全遵守 AGPLv3 的相关条款
-* 商业版：闭源，报价 ¥20000，请联系 QQ 845765 或者微信号 DL88250 进行细节咨询
+* 商业版：闭源，报价 ¥20000，请联系 QQ 845765 进行细节咨询
 
 **关于商业版和社区版的对比请看[这里](https://hacpai.com/article/1500543226433)，企业网站、经营性网站、以营利为目的或实现盈利的网站请购买商业版。**
 

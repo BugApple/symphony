@@ -21,10 +21,8 @@ import org.apache.commons.lang.time.DateUtils;
 import org.b3log.latke.Keys;
 import org.b3log.latke.cache.Cache;
 import org.b3log.latke.cache.CacheFactory;
-import org.b3log.latke.ioc.LatkeBeanManager;
-import org.b3log.latke.ioc.Lifecycle;
-import org.b3log.latke.ioc.inject.Named;
-import org.b3log.latke.ioc.inject.Singleton;
+import org.b3log.latke.ioc.BeanManager;
+import org.b3log.latke.ioc.Singleton;
 import org.b3log.latke.logging.Level;
 import org.b3log.latke.logging.Logger;
 import org.b3log.latke.repository.*;
@@ -49,10 +47,9 @@ import java.util.List;
  * Article cache.
  *
  * @author <a href="http://88250.b3log.org">Liang Ding</a>
- * @version 1.3.1.0, Sep 6, 2018
+ * @version 1.3.1.1, Oct 23, 2018
  * @since 1.4.0
  */
-@Named
 @Singleton
 public class ArticleCache {
 
@@ -109,7 +106,7 @@ public class ArticleCache {
      * Loads side hot articles.
      */
     public void loadSideHotArticles() {
-        final LatkeBeanManager beanManager = Lifecycle.getBeanManager();
+        final BeanManager beanManager = BeanManager.getInstance();
         final ArticleRepository articleRepository = beanManager.getReference(ArticleRepository.class);
         final ArticleQueryService articleQueryService = beanManager.getReference(ArticleQueryService.class);
 
@@ -150,6 +147,14 @@ public class ArticleCache {
      */
     public List<JSONObject> getSideRandomArticles() {
         int size = Symphonys.getInt("sideRandomArticlesCnt");
+        if (1 > size) {
+            return Collections.emptyList();
+        }
+
+        if (SIDE_RANDOM_ARTICLES.isEmpty()) {
+            return Collections.emptyList();
+        }
+
         size = size > SIDE_RANDOM_ARTICLES.size() ? SIDE_RANDOM_ARTICLES.size() : size;
         Collections.shuffle(SIDE_RANDOM_ARTICLES);
 
@@ -160,13 +165,18 @@ public class ArticleCache {
      * Loads side random articles.
      */
     public void loadSideRandomArticles() {
-        final LatkeBeanManager beanManager = Lifecycle.getBeanManager();
+        final int size = Symphonys.getInt("sideRandomArticlesCnt");
+        if (1 > size) {
+            return;
+        }
+
+        final BeanManager beanManager = BeanManager.getInstance();
         final ArticleRepository articleRepository = beanManager.getReference(ArticleRepository.class);
         final ArticleQueryService articleQueryService = beanManager.getReference(ArticleQueryService.class);
 
         Stopwatchs.start("Load side random articles");
         try {
-            final List<JSONObject> articles = articleRepository.getRandomly(Symphonys.getInt("sideRandomArticlesCnt") * 5);
+            final List<JSONObject> articles = articleRepository.getRandomly(size * 5);
             articleQueryService.organizeArticles(UserExt.USER_AVATAR_VIEW_MODE_C_STATIC, articles);
 
             SIDE_RANDOM_ARTICLES.clear();
@@ -210,7 +220,7 @@ public class ArticleCache {
      * Loads perfect articles.
      */
     public void loadPerfectArticles() {
-        final LatkeBeanManager beanManager = Lifecycle.getBeanManager();
+        final BeanManager beanManager = BeanManager.getInstance();
         final ArticleRepository articleRepository = beanManager.getReference(ArticleRepository.class);
         final ArticleQueryService articleQueryService = beanManager.getReference(ArticleQueryService.class);
 

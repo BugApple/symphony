@@ -25,12 +25,11 @@ import org.apache.commons.codec.digest.DigestUtils;
 import org.apache.commons.io.IOUtils;
 import org.apache.commons.lang.StringUtils;
 import org.b3log.latke.Latkes;
-import org.b3log.latke.ioc.LatkeBeanManager;
-import org.b3log.latke.ioc.Lifecycle;
+import org.b3log.latke.ioc.BeanManager;
 import org.b3log.latke.logging.Level;
 import org.b3log.latke.logging.Logger;
 import org.b3log.latke.repository.jdbc.JdbcRepository;
-import org.b3log.latke.service.LangPropsServiceImpl;
+import org.b3log.latke.service.LangPropsService;
 import org.b3log.latke.util.Callstacks;
 import org.b3log.latke.util.Stopwatchs;
 import org.b3log.latke.util.URLs;
@@ -66,7 +65,7 @@ import java.util.concurrent.*;
  * @author <a href="http://88250.b3log.org">Liang Ding</a>
  * @author <a href="http://zephyr.b3log.org">Zephyr</a>
  * @author <a href="http://vanessa.b3log.org">Vanessa</a>
- * @version 1.11.21.5, Sep 12, 2018
+ * @version 1.11.21.7, Oct 20, 2018
  * @since 0.2.0
  */
 public final class Markdowns {
@@ -75,16 +74,6 @@ public final class Markdowns {
      * Logger.
      */
     private static final Logger LOGGER = Logger.getLogger(Markdowns.class);
-
-    /**
-     * Bean manager.
-     */
-    private static final LatkeBeanManager beanManager = Lifecycle.getBeanManager();
-
-    /**
-     * User query service.
-     */
-    private static final UserQueryService userQueryService;
 
     /**
      * Markdown cache.
@@ -123,12 +112,6 @@ public final class Markdowns {
     public static boolean MARKED_AVAILABLE;
 
     static {
-        if (null != beanManager) {
-            userQueryService = beanManager.getReference(UserQueryService.class);
-        } else {
-            userQueryService = null;
-        }
-
         try {
             final URL url = new URL(MARKED_ENGINE_URL);
             final HttpURLConnection conn = (HttpURLConnection) url.openConnection();
@@ -215,8 +198,6 @@ public final class Markdowns {
             if (StringUtils.startsWithIgnoreCase(data, "data:")
                     || StringUtils.startsWithIgnoreCase(data, "javascript")) {
                 embed.remove();
-
-                continue;
             }
         }
 
@@ -277,8 +258,9 @@ public final class Markdowns {
             return cachedHTML;
         }
 
-        final LangPropsServiceImpl langPropsService = Lifecycle.getBeanManager().getReference(LangPropsServiceImpl.class);
-
+        final BeanManager beanManager = BeanManager.getInstance();
+        final LangPropsService langPropsService = beanManager.getReference(LangPropsService.class);
+        final UserQueryService userQueryService = beanManager.getReference(UserQueryService.class);
         final ExecutorService pool = Executors.newSingleThreadExecutor();
         final long[] threadId = new long[1];
 
@@ -376,11 +358,15 @@ public final class Markdowns {
                     return;
                 }
 
-                if (!StringUtils.startsWithAny(src, new String[]{Latkes.getServePath(), Symphonys.get("qiniu.domain")})) {
-                    src = URLs.encode(src);
-                    a.attr("href", Latkes.getServePath() + "/forward?goto=" + src);
-                    a.attr("target", "_blank");
+                if (StringUtils.startsWithAny(src, new String[]{Latkes.getServePath(), Symphonys.get("qiniu.domain")})
+                        || StringUtils.endsWithIgnoreCase(src, ".mov")) {
+                    return;
                 }
+
+                src = URLs.encode(src);
+                a.attr("href", Latkes.getServePath() + "/forward?goto=" + src);
+                a.attr("target", "_blank");
+                a.attr("rel", "nofollow");
             });
             doc.outputSettings().prettyPrint(false);
 

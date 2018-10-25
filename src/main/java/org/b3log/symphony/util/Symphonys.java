@@ -18,13 +18,13 @@
 package org.b3log.symphony.util;
 
 import org.apache.commons.io.IOUtils;
+import org.apache.commons.lang.StringUtils;
 import org.b3log.latke.Latkes;
-import org.b3log.latke.ioc.LatkeBeanManager;
-import org.b3log.latke.ioc.Lifecycle;
+import org.b3log.latke.ioc.BeanManager;
+import org.b3log.latke.logging.Level;
 import org.b3log.latke.logging.Logger;
 import org.b3log.latke.repository.jdbc.JdbcRepository;
 import org.b3log.latke.service.LangPropsService;
-import org.b3log.latke.service.LangPropsServiceImpl;
 import org.b3log.symphony.SymphonyServletListener;
 import org.b3log.symphony.model.Common;
 import org.b3log.symphony.model.Option;
@@ -35,12 +35,14 @@ import javax.net.ssl.KeyManager;
 import javax.net.ssl.SSLContext;
 import javax.net.ssl.TrustManager;
 import javax.net.ssl.X509TrustManager;
+import java.io.FileInputStream;
+import java.io.InputStream;
 import java.io.OutputStream;
 import java.net.HttpURLConnection;
 import java.net.URL;
 import java.security.SecureRandom;
 import java.security.cert.X509Certificate;
-import java.util.ResourceBundle;
+import java.util.Properties;
 import java.util.Timer;
 import java.util.TimerTask;
 import java.util.concurrent.Executors;
@@ -50,7 +52,7 @@ import java.util.concurrent.ThreadPoolExecutor;
  * Symphony utilities.
  *
  * @author <a href="http://88250.b3log.org">Liang Ding</a>
- * @version 1.8.0.1, Sep 20, 2018
+ * @version 1.8.0.2, Oct 16, 2018
  * @since 0.1.0
  */
 public final class Symphonys {
@@ -58,12 +60,12 @@ public final class Symphonys {
     /**
      * Configurations.
      */
-    public static final ResourceBundle CFG = ResourceBundle.getBundle("symphony");
+    public static final Properties CFG = new Properties();
 
     /**
-     * HacPai bot User-Agent.
+     * User-Agent.
      */
-    public static final String USER_AGENT_BOT = "Mozilla/5.0 (compatible; Sym/" + SymphonyServletListener.VERSION + "; +" + Latkes.getServePath() + ")";
+    public static final String USER_AGENT_BOT = "Sym/" + SymphonyServletListener.VERSION + "; +https://github.com/b3log/symphony";
 
     /**
      * Reserved tags.
@@ -91,8 +93,28 @@ public final class Symphonys {
     private static final Logger LOGGER = Logger.getLogger(Symphonys.class);
 
     static {
+        try {
+            InputStream resourceAsStream;
+            final String symPropsEnv = System.getenv("SYM_PROPS");
+            if (StringUtils.isNotBlank(symPropsEnv)) {
+                LOGGER.trace("Loading symphony.properties from env var [$SYM_PROPS=" + symPropsEnv + "]");
+                resourceAsStream = new FileInputStream(symPropsEnv);
+            } else {
+                LOGGER.trace("Loading symphony.properties from classpath [/symphony.properties]");
+                resourceAsStream = Latkes.class.getResourceAsStream("/symphony.properties");
+            }
+
+            CFG.load(resourceAsStream);
+        } catch (final Exception e) {
+            LOGGER.log(Level.ERROR, "Loads symphony.properties failed, exited", e);
+
+            System.exit(-1);
+        }
+    }
+
+    static {
         // Loads reserved tags
-        final String reservedTags = CFG.getString("reservedTags");
+        final String reservedTags = CFG.getProperty("reservedTags");
         final String[] tags = reservedTags.split(",");
         RESERVED_TAGS = new String[tags.length];
 
@@ -103,7 +125,7 @@ public final class Symphonys {
         }
 
         // Loads white list tags
-        final String whiteListTags = CFG.getString("whitelist.tags");
+        final String whiteListTags = CFG.getProperty("whitelist.tags");
         final String[] wlTags = whiteListTags.split(",");
         WHITE_LIST_TAGS = new String[wlTags.length];
 
@@ -114,7 +136,7 @@ public final class Symphonys {
         }
 
         // Loads reserved usernames
-        final String reservedUserNames = CFG.getString("reservedUserNames");
+        final String reservedUserNames = CFG.getProperty("reservedUserNames");
         final String[] userNames = reservedUserNames.split(",");
         RESERVED_USER_NAMES = new String[userNames.length];
 
@@ -158,7 +180,7 @@ public final class Symphonys {
 
                 HttpURLConnection httpConn = null;
                 try {
-                    final LatkeBeanManager beanManager = Lifecycle.getBeanManager();
+                    final BeanManager beanManager = BeanManager.getInstance();
                     final OptionQueryService optionQueryService = beanManager.getReference(OptionQueryService.class);
 
                     final JSONObject statistic = optionQueryService.getStatistic();
@@ -167,7 +189,7 @@ public final class Symphonys {
                         return;
                     }
 
-                    final LangPropsService langPropsService = beanManager.getReference(LangPropsServiceImpl.class);
+                    final LangPropsService langPropsService = beanManager.getReference(LangPropsService.class);
 
                     httpConn = (HttpURLConnection) new URL("https://rhythm.b3log.org/sym").openConnection();
                     httpConn.setConnectTimeout(10000);
@@ -230,7 +252,7 @@ public final class Symphonys {
      * @return string property value corresponding to the specified key, returns {@code null} if not found
      */
     public static String get(final String key) {
-        return CFG.getString(key);
+        return CFG.getProperty(key);
     }
 
     /**
@@ -241,7 +263,6 @@ public final class Symphonys {
      */
     public static Boolean getBoolean(final String key) {
         final String stringValue = get(key);
-
         if (null == stringValue) {
             return null;
         }
